@@ -35,7 +35,7 @@ export async function createBook(_previousState: UploadState, formData: FormData
   if (title.length < 2 || authorName.length < 2 || description.length < 20) return { error: 'Enter a title, author, and description of at least 20 characters.' };
   if (!/^[0-9a-f-]{36}$/.test(bookId)) return { error: 'The upload session is invalid. Please try again.' };
   if (pdfPath !== `${user.id}/${bookId}/book.pdf`) return { error: 'The PDF upload path is invalid.' };
-  if (coverPath && coverPath !== `${user.id}/${bookId}/cover`) return { error: 'The cover upload path is invalid.' };
+  if (coverPath && !new RegExp(`^${user.id}/${bookId}/cover\\.[a-z0-9]+$`).test(coverPath)) return { error: 'The cover upload path is invalid.' };
   if (!isFree && (!Number.isFinite(priceNaira) || priceNaira <= 0)) return { error: 'Enter a valid price, or mark the book as free.' };
 
   const slug = `${slugify(title) || 'book'}-${bookId.slice(0, 8)}`;

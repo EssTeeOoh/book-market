@@ -26,7 +26,10 @@ export function UploadForm() {
     if (!user) { setState({ error: 'Your session expired. Please sign in again.' }); setPending(false); return; }
     const bookId = crypto.randomUUID();
     const pdfPath = `${user.id}/${bookId}/book.pdf`;
-    const coverPath = cover instanceof File && cover.size > 0 ? `${user.id}/${bookId}/cover` : '';
+    const coverExtension = cover instanceof File && cover.size > 0
+      ? (cover.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg')
+      : '';
+    const coverPath = cover instanceof File && cover.size > 0 ? `${user.id}/${bookId}/cover.${coverExtension}` : '';
     const pdfUpload = await supabase.storage.from('book-files').upload(pdfPath, pdf, { contentType: 'application/pdf', upsert: false });
     if (pdfUpload.error) { setState({ error: `Could not upload the PDF: ${pdfUpload.error.message}` }); setPending(false); return; }
     if (coverPath && cover instanceof File) {
