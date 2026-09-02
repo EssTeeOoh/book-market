@@ -32,8 +32,10 @@ function BookSection({ title, description, books }: { title: string; description
   return <section className="mx-auto max-w-7xl px-6 py-14 sm:px-10"><div className="mb-7 flex items-end justify-between gap-6"><div><p className="text-3xl font-semibold tracking-[-0.05em]">{title}</p><p className="mt-2 text-sm leading-6 text-[#62645d]">{description}</p></div><Link href="/books" aria-label="Browse all books" title="Browse books" className="hidden h-10 w-10 items-center justify-center rounded-full border border-[#d6d2c9] transition hover:border-[#b64d2d] sm:flex"><Image src="/books-icon.png" alt="" width={28} height={28} className="h-6 w-6" /></Link></div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{books.map((book) => <BookCard key={book.id} book={book} />)}</div></section>;
 }
 
-function AccountIcon({ avatarUrl }: { avatarUrl?: string | null }) {
-  if (avatarUrl) return <Image src={avatarUrl} alt="" width={40} height={40} className="h-full w-full rounded-full object-cover" />;
+async function AccountIcon() {
+  const supabase = await createClient();
+  const { data: profile } = await supabase.rpc('ensure_my_profile') as { data: { avatar_url?: string | null } | null };
+  if (profile?.avatar_url) return <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />;
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="3.5" /><path strokeLinecap="round" d="M5.5 20c.8-3.1 3-4.7 6.5-4.7s5.7 1.6 6.5 4.7" /></svg>;
 }
 

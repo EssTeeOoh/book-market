@@ -6,6 +6,7 @@ export function CheckoutButton({ bookId }: { bookId: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function startCheckout() {
+    if (pending) return;
     setPending(true);
     setError(null);
     const response = await fetch('/api/payments/initialize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookId }) });

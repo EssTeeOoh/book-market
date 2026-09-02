@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ payment?: string }> };
 
-function AccountIcon() {
+async function AccountIcon() {
+  const supabase = await createClient();
+  const { data: profile } = await supabase.rpc('ensure_my_profile') as { data: { avatar_url?: string | null } | null };
+  if (profile?.avatar_url) return <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />;
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="3.5" /><path strokeLinecap="round" d="M5.5 20c.8-3.1 3-4.7 6.5-4.7s5.7 1.6 6.5 4.7" /></svg>;
 }
 
