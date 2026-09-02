@@ -33,25 +33,29 @@ export async function rejectBook(formData: FormData) {
 export async function deleteBook(formData: FormData) {
   const supabase = await requireAdmin();
   const bookId = String(formData.get('book_id') ?? '');
-  if (!/^[0-9a-f-]{36}$/.test(bookId)) return;
+  if (!/^[0-9a-f-]{36}$/.test(bookId)) redirect('/admin?error=Invalid%20book%20ID.');
 
   const { data: book, error: bookError } = await supabase
     .from('books')
     .select('pdf_storage_key, cover_storage_key')
     .eq('id', bookId)
     .maybeSingle();
-  if (bookError || !book) return;
+  if (bookError) redirect(`/admin?error=${encodeURIComponent(`Could not find the book: ${bookError.message}`)}`);
+  if (!book) redirect('/admin?error=Book%20not%20found.');
 
   const admin = createAdminClient();
+  const { error: deleteError } = await admin.from('books').delete().eq('id', bookId);
+  if (deleteError) redirect(`/admin?error=${encodeURIComponent(`Could not delete the book: ${deleteError.message}`)}`);
+
   const storageDeletes = [
     admin.storage.from('book-files').remove([book.pdf_storage_key]),
     ...(book.cover_storage_key ? [admin.storage.from('book-covers').remove([book.cover_storage_key])] : []),
   ];
   const storageResults = await Promise.all(storageDeletes);
-  if (storageResults.some(({ error }) => error)) return;
-
-  await admin.from('books').delete().eq('id', bookId);
+  const storageError = storageResults.find(({ error }) => error)?.error;
   revalidatePath('/');
   revalidatePath('/books');
   revalidatePath('/admin');
+  if (storageError) redirect(`/admin?warning=${encodeURIComponent(`Book deleted, but a Storage file could not be removed: ${storageError.message}`)}`);
+  redirect('/admin?deleted=1');
 }
