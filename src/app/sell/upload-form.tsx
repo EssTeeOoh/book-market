@@ -36,8 +36,20 @@ export function UploadForm() {
     formData.set('book_id', bookId);
     formData.set('pdf_path', pdfPath);
     formData.set('cover_path', coverPath);
-    const result = await createBook({}, formData);
-    if (result?.error) { await supabase.storage.from('book-files').remove([pdfPath]); if (coverPath) await supabase.storage.from('book-covers').remove([coverPath]); setState(result); }
+    // The files are already in Supabase Storage. Do not send them through Vercel again.
+    formData.delete('pdf');
+    formData.delete('cover');
+    try {
+      const result = await Promise.race([
+        createBook({}, formData),
+        new Promise<UploadState>((resolve) => setTimeout(() => resolve({ error: 'The book record is taking too long to save. Check the deployment logs and try again.' }), 30000)),
+      ]);
+      if (result?.error) { await supabase.storage.from('book-files').remove([pdfPath]); if (coverPath) await supabase.storage.from('book-covers').remove([coverPath]); setState(result); }
+    } catch {
+      await supabase.storage.from('book-files').remove([pdfPath]);
+      if (coverPath) await supabase.storage.from('book-covers').remove([coverPath]);
+      setState({ error: 'The upload could not be completed. Please try again.' });
+    }
     setPending(false);
   }
 

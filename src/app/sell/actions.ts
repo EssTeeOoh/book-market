@@ -13,9 +13,11 @@ function slugify(value: string) {
 export async function createBook(_previousState: UploadState, formData: FormData): Promise<UploadState> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  console.info('[upload] authenticated request received');
   if (!user) return { error: 'You must be signed in to upload a book.' };
 
   const { data: profile, error: profileError } = await supabase.rpc('ensure_my_profile');
+  console.info('[upload] profile check completed', { ok: !profileError, role: profile?.role ?? null });
   if (profileError) return { error: `Could not verify your profile: ${profileError.message}` };
   if (!profile || (profile.role !== 'seller' && profile.role !== 'admin')) return { error: 'Only sellers and admins can upload books.' };
   if (profile.status !== 'active') return { error: 'This account is not active and cannot upload books.' };
@@ -55,10 +57,13 @@ export async function createBook(_previousState: UploadState, formData: FormData
   });
 
   if (insertError) {
+    console.error('[upload] book metadata insert failed', { code: insertError.code, message: insertError.message });
     await supabase.storage.from('book-files').remove([pdfPath]);
     if (coverPath) await supabase.storage.from('book-covers').remove([coverPath]);
     return { error: `Could not save the book: ${insertError.message}` };
   }
+
+  console.info('[upload] book metadata inserted', { bookId });
 
   revalidatePath('/');
   revalidatePath('/books');
