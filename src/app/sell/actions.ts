@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type UploadState = { error?: string };
 
@@ -37,6 +38,17 @@ export async function createBook(_previousState: UploadState, formData: FormData
   if (pdfPath !== `${user.id}/${bookId}/book.pdf`) return { error: 'The PDF upload path is invalid.' };
   if (coverPath && !new RegExp(`^${user.id}/${bookId}/cover\\.[a-z0-9]+$`).test(coverPath)) return { error: 'The cover upload path is invalid.' };
   if (!isFree && (!Number.isFinite(priceNaira) || priceNaira <= 0)) return { error: 'Enter a valid price, or mark the book as free.' };
+
+  // Do not create metadata that points to missing Storage objects.
+  const admin = createAdminClient();
+  const { data: pdfObjects } = await admin.storage.from('book-files').list(`${user.id}/${bookId}`, { search: 'book.pdf' });
+  if (!pdfObjects?.some((object) => object.name === 'book.pdf')) return { error: 'The PDF upload could not be verified. Please try again.' };
+  if (coverPath) {
+    const coverFolder = `${user.id}/${bookId}`;
+    const coverName = coverPath.slice(`${coverFolder}/`.length);
+    const { data: coverObjects } = await admin.storage.from('book-covers').list(coverFolder, { search: coverName });
+    if (!coverObjects?.some((object) => object.name === coverName)) return { error: 'The cover upload could not be verified. Please try again.' };
+  }
 
   const slug = `${slugify(title) || 'book'}-${bookId.slice(0, 8)}`;
   const { error: insertError } = await supabase.from('books').insert({
