@@ -30,6 +30,17 @@ export async function rejectBook(formData: FormData) {
   revalidatePath('/admin');
 }
 
+export async function archiveBook(formData: FormData) {
+  const supabase = await requireAdmin();
+  const bookId = String(formData.get('book_id') ?? '');
+  const { error } = await supabase.from('books').update({ status: 'archived' }).eq('id', bookId);
+  if (error) redirect(`/admin?error=${encodeURIComponent(`Could not archive the book: ${error.message}`)}`);
+  revalidatePath('/');
+  revalidatePath('/books');
+  revalidatePath('/admin');
+  redirect('/admin?archived=1');
+}
+
 export async function deleteBook(formData: FormData) {
   const supabase = await requireAdmin();
   const bookId = String(formData.get('book_id') ?? '');
@@ -44,6 +55,14 @@ export async function deleteBook(formData: FormData) {
   if (!book) redirect('/admin?error=Book%20not%20found.');
 
   const admin = createAdminClient();
+  const [{ count: orderItemCount }, { count: libraryItemCount }, { count: downloadEventCount }] = await Promise.all([
+    admin.from('order_items').select('id', { count: 'exact', head: true }).eq('book_id', bookId),
+    admin.from('library_items').select('id', { count: 'exact', head: true }).eq('book_id', bookId),
+    admin.from('download_events').select('id', { count: 'exact', head: true }).eq('book_id', bookId),
+  ]);
+  if ((orderItemCount ?? 0) > 0 || (libraryItemCount ?? 0) > 0 || (downloadEventCount ?? 0) > 0) {
+    redirect('/admin?error=This%20book%20has%20purchase%20or%20download%20history.%20Archive%20it%20instead%20of%20deleting%20it.');
+  }
   const { error: deleteError } = await admin.from('books').delete().eq('id', bookId);
   if (deleteError) redirect(`/admin?error=${encodeURIComponent(`Could not delete the book: ${deleteError.message}`)}`);
 

@@ -24,10 +24,9 @@ export async function GET(_request: Request, { params }: Props) {
   if (!book) return NextResponse.json({ error: 'Book not found.' }, { status: 404 });
   const { data: signed, error } = await admin.storage.from('book-files').createSignedUrl(book.pdf_storage_key, 60);
   if (error || !signed?.signedUrl) return NextResponse.json({ error: 'Download could not be prepared.' }, { status: 500 });
-  const fileResponse = await fetch(signed.signedUrl);
-  if (!fileResponse.ok || !fileResponse.body) return NextResponse.json({ error: 'The PDF could not be retrieved.' }, { status: 502 });
   await admin.from('download_events').insert({ user_id: user.id, book_id: bookId, order_id: entitlement.order_id });
   await admin.from('library_items').update({ last_downloaded_at: new Date().toISOString() }).eq('id', entitlement.id);
   const filename = `${book.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 80) || 'book'}.pdf`;
-  return new NextResponse(fileResponse.body, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'private, no-store' } });
+  const downloadUrl = `${signed.signedUrl}&download=${encodeURIComponent(filename)}`;
+  return NextResponse.redirect(downloadUrl, { status: 302 });
 }
