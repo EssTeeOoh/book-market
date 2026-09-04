@@ -46,7 +46,8 @@ export async function deleteBook(formData: FormData) {
   const bookId = String(formData.get('book_id') ?? '');
   if (!/^[0-9a-f-]{36}$/.test(bookId)) redirect('/admin?error=Invalid%20book%20ID.');
 
-  const { data: book, error: bookError } = await supabase
+  const admin = createAdminClient();
+  const { data: book, error: bookError } = await admin
     .from('books')
     .select('pdf_storage_key, cover_storage_key')
     .eq('id', bookId)
@@ -54,7 +55,6 @@ export async function deleteBook(formData: FormData) {
   if (bookError) redirect(`/admin?error=${encodeURIComponent(`Could not find the book: ${bookError.message}`)}`);
   if (!book) redirect('/admin?error=Book%20not%20found.');
 
-  const admin = createAdminClient();
   const [{ count: orderItemCount }, { count: libraryItemCount }, { count: downloadEventCount }] = await Promise.all([
     admin.from('order_items').select('id', { count: 'exact', head: true }).eq('book_id', bookId),
     admin.from('library_items').select('id', { count: 'exact', head: true }).eq('book_id', bookId),
