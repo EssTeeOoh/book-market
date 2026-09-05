@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { createBook, type UploadState } from './actions';
 
@@ -18,6 +19,7 @@ async function uploadWithSignedUrl(supabase: ReturnType<typeof createClient>, us
 }
 
 export function UploadForm() {
+  const router = useRouter();
   const [isFree, setIsFree] = useState(false);
   const [state, setState] = useState<UploadState>({});
   const [pending, setPending] = useState(false);
@@ -86,6 +88,9 @@ export function UploadForm() {
         await supabase.storage.from('book-files').remove([pdfPath]);
         if (coverPath) await supabase.storage.from('book-covers').remove([coverPath]);
         setState(result); setUploadStage('idle');
+      } else if (result?.success) {
+        router.push('/account?uploaded=1');
+        router.refresh();
       }
     } catch {
       await supabase.storage.from('book-files').remove([pdfPath]);

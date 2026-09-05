@@ -1,11 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export type UploadState = { error?: string };
+export type UploadState = { error?: string; success?: boolean };
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 75);
@@ -79,5 +78,5 @@ export async function createBook(_previousState: UploadState, formData: FormData
 
   revalidatePath('/');
   revalidatePath('/books');
-  redirect('/account?uploaded=1');
+  return { success: true };
 }
