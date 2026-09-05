@@ -6,6 +6,17 @@ import { createBook, type UploadState } from './actions';
 
 type UploadStage = 'idle' | 'pdf' | 'cover' | 'saving';
 
+async function uploadWithSignedUrl(supabase: ReturnType<typeof createClient>, userId: string, bookId: string, kind: 'pdf' | 'cover', file: File) {
+  const extension = kind === 'pdf' ? 'pdf' : (file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg');
+  const response = await fetch('/api/uploads/signed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookId, kind, extension }) });
+  const result = await response.json() as { path?: string; token?: string; error?: string };
+  if (!response.ok || !result.path || !result.token) throw new Error(result.error ?? `Could not prepare the ${kind} upload.`);
+  const bucket = kind === 'pdf' ? 'book-files' : 'book-covers';
+  const { error } = await supabase.storage.from(bucket).uploadToSignedUrl(result.path, result.token, file, { contentType: file.type || (kind === 'pdf' ? 'application/pdf' : 'image/jpeg') });
+  if (error) throw new Error(error.message);
+  return result.path;
+}
+
 export function UploadForm() {
   const [isFree, setIsFree] = useState(false);
   const [state, setState] = useState<UploadState>({});
@@ -43,17 +54,19 @@ export function UploadForm() {
     const coverPath = cover instanceof File && cover.size > 0 ? `${user.id}/${bookId}/cover.${coverExtension}` : '';
 
     setUploadStage('pdf');
-    const pdfUpload = await supabase.storage.from('book-files').upload(pdfPath, pdf, { contentType: 'application/pdf', upsert: false });
-    if (pdfUpload.error) {
-      setState({ error: `Could not upload the PDF: ${pdfUpload.error.message}` }); setPending(false); setUploadStage('idle'); return;
+    try {
+      await uploadWithSignedUrl(supabase, user.id, bookId, 'pdf', pdf);
+    } catch (error) {
+      setState({ error: `Could not upload the PDF: ${error instanceof Error ? error.message : 'Please try again.'}` }); setPending(false); setUploadStage('idle'); return;
     }
 
     if (coverPath && cover instanceof File) {
       setUploadStage('cover');
-      const coverUpload = await supabase.storage.from('book-covers').upload(coverPath, cover, { contentType: cover.type, upsert: false });
-      if (coverUpload.error) {
+      try {
+        await uploadWithSignedUrl(supabase, user.id, bookId, 'cover', cover);
+      } catch (error) {
         await supabase.storage.from('book-files').remove([pdfPath]);
-        setState({ error: `Could not upload the cover: ${coverUpload.error.message}` }); setPending(false); setUploadStage('idle'); return;
+        setState({ error: `Could not upload the cover: ${error instanceof Error ? error.message : 'Please try again.'}` }); setPending(false); setUploadStage('idle'); return;
       }
     }
 
