@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 type AuthMode = 'login' | 'sign-up' | 'forgot-password' | 'reset-password';
@@ -23,12 +23,55 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recoveryReady, setRecoveryReady] = useState(mode !== 'reset-password');
+  const [checkingRecovery, setCheckingRecovery] = useState(mode === 'reset-password');
   const details = copy[mode];
+
+  useEffect(() => {
+    if (mode !== 'reset-password') return;
+    let active = true;
+
+    async function prepareRecoverySession() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const tokenHash = params.get('token_hash');
+      const tokenType = params.get('type');
+      let recoveryError: string | null = null;
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        recoveryError = error?.message ?? null;
+      } else if (tokenHash && tokenType === 'recovery') {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
+        recoveryError = error?.message ?? null;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (active) {
+        setRecoveryReady(Boolean(session));
+        setCheckingRecovery(false);
+        if (recoveryError && !session) setError(recoveryError);
+      }
+    }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setRecoveryReady(true);
+        setCheckingRecovery(false);
+      }
+    });
+    void prepareRecoverySession();
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, [mode]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setMessage(null);
+    if (mode === 'reset-password' && !recoveryReady) {
+      setError('This password reset link is invalid or has expired. Request a new link and try again.');
+      return;
+    }
     setIsSubmitting(true);
 
     let result: { error: { message: string } | null };
@@ -100,9 +143,11 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             <input id="password" name="password" type="password" autoComplete={mode === 'reset-password' ? 'new-password' : isSignUp ? 'new-password' : 'current-password'} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-[#d6d2c9] bg-white px-4 py-3 text-[#20211f] outline-none transition focus:border-[#b64d2d] focus:ring-2 focus:ring-[#b64d2d]/20" />
           </div>
         )}
+        {mode === 'reset-password' && checkingRecovery && <p role="status" className="rounded-xl bg-[#f4f1ea] px-4 py-3 text-sm leading-6 text-[#62645d]">Preparing your secure password reset...</p>}
+        {mode === 'reset-password' && !checkingRecovery && !recoveryReady && <p role="alert" className="rounded-xl bg-[#fbe9e3] px-4 py-3 text-sm leading-6 text-[#8d321d]">This reset link is invalid or has expired. Request a new link and try again.</p>}
         {error && <p role="alert" className="rounded-xl bg-[#fbe9e3] px-4 py-3 text-sm leading-6 text-[#8d321d]">{error}</p>}
         {message && <p role="status" className="rounded-xl bg-[#e5eee6] px-4 py-3 text-sm leading-6 text-[#31563c]">{message}</p>}
-        <button type="submit" disabled={isSubmitting} className="w-full rounded-xl bg-[#20211f] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#b64d2d] disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? 'Please wait...' : details.submit}</button>
+        <button type="submit" disabled={isSubmitting || checkingRecovery || (mode === 'reset-password' && !recoveryReady)} className="w-full rounded-xl bg-[#20211f] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#b64d2d] disabled:cursor-not-allowed disabled:opacity-60">{isSubmitting ? 'Please wait...' : checkingRecovery ? 'Preparing reset...' : details.submit}</button>
       </form>
 
       {(mode === 'login' || mode === 'sign-up') && (
