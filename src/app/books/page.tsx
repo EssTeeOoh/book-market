@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 type Book = { id: string; slug: string; title: string; author_name: string; description: string; price_minor: number; currency: string; is_free: boolean; like_count: number; cover_storage_key: string | null };
 
 function price(book: Book) {

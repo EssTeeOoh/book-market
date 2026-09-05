@@ -4,6 +4,8 @@ import { CheckoutButton } from "@/components/checkout-button";
 import { LikeButton } from "@/components/like-button";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ payment?: string }> };
 
 async function AccountIcon() {
