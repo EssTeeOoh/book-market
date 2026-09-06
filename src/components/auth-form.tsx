@@ -85,7 +85,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       });
     } else if (mode === 'forgot-password') {
       result = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
       });
     } else {
       result = await supabase.auth.updateUser({ password });

@@ -17,6 +17,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/auth/auth-code-error', requestUrl.origin));
   }
 
+  // Password recovery must land on the new-password screen, not onboarding.
+  if (nextPath === '/auth/reset-password') {
+    return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+  }
+
   const { data: profile } = await supabase.rpc('ensure_my_profile') as { data: { username?: string | null } | null };
   if (!profile?.username) {
     return NextResponse.redirect(new URL('/account/setup', requestUrl.origin));
