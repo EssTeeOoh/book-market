@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f8f6;
+  --foreground: #1d2420;
+  --surface: #ffffff;
+  --muted-surface: #eef2ef;
+  --accent: #f26445;
+  --accent-soft: #fff0eb;
+  --line: #e1e7e2;
 }
 
 @theme inline {
@@ -12,18 +17,36 @@
   --font-mono: "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
 }
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active,
+a:active {
+  transform: scale(0.985);
+}
+
+/* Bring the older inline page classes into the current bookstore palette. */
+main[class*="bg-[#f4f1ea]"] { background: #f7f8f6 !important; color: #1d2420 !important; }
+[class*="bg-[#faf9f5]"] { background: #fff !important; }
+[class*="bg-[#20211f]"] { background: #1d2420 !important; }
+[class*="bg-[#dfe8df]"] { background: #eef2ef !important; }
+[class*="border-[#ded9cf]"], [class*="border-[#d6d2c9]"] { border-color: #e1e7e2 !important; }
+[class*="text-[#b64d2d]"] { color: #f26445 !important; }
+[class*="hover:bg-[#b64d2d]"]:hover { background: #f26445 !important; }
+[class*="hover:border-[#b64d2d]"]:hover { border-color: #f26445 !important; }
 
 /* Keep legacy /books navigation links compact and consistent with the icon nav. */
 a[href="/books"]:not(:has(img)) {
@@ -62,4 +85,16 @@ a[href="/books"]:not(:has(img)):hover::after,
 a[href="/books"]:not(:has(img)):focus-visible::after {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* Keep uploaded book artwork fully visible instead of cropping it. */
+img[alt$="cover"] {
+  object-fit: contain !important;
+  padding: 0.5rem;
+}
+
+[role="img"][aria-label$="cover"] {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
 }
