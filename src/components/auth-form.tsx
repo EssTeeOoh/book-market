@@ -20,6 +20,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +73,10 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       setError('This password reset link is invalid or has expired. Request a new link and try again.');
       return;
     }
+    if (mode === 'reset-password' && password !== confirmPassword) {
+      setError('Your new passwords do not match.');
+      return;
+    }
     setIsSubmitting(true);
 
     let result: { error: { message: string } | null };
@@ -85,7 +90,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       });
     } else if (mode === 'forgot-password') {
       result = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       });
     } else {
       result = await supabase.auth.updateUser({ password });
@@ -133,16 +138,17 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       <p className="mt-3 text-base leading-7 text-[#62645d]">{details.description}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-        <div>
+        {mode !== 'reset-password' && <div>
           <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#20211f]">Email address</label>
           <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-xl border border-[#d6d2c9] bg-white px-4 py-3 text-[#20211f] outline-none transition focus:border-[#b64d2d] focus:ring-2 focus:ring-[#b64d2d]/20" />
-        </div>
+        </div>}
         {showPassword && (
           <div>
             <label htmlFor="password" className="mb-2 block text-sm font-medium text-[#20211f]">{mode === 'reset-password' ? 'New password' : 'Password'}</label>
             <input id="password" name="password" type="password" autoComplete={mode === 'reset-password' ? 'new-password' : isSignUp ? 'new-password' : 'current-password'} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-[#d6d2c9] bg-white px-4 py-3 text-[#20211f] outline-none transition focus:border-[#b64d2d] focus:ring-2 focus:ring-[#b64d2d]/20" />
           </div>
         )}
+        {mode === 'reset-password' && <div><label htmlFor="confirm-password" className="mb-2 block text-sm font-medium text-[#20211f]">Confirm new password</label><input id="confirm-password" name="confirm-password" type="password" autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-xl border border-[#d6d2c9] bg-white px-4 py-3 text-[#20211f] outline-none transition focus:border-[#b64d2d] focus:ring-2 focus:ring-[#b64d2d]/20" /></div>}
         {mode === 'reset-password' && checkingRecovery && <p role="status" className="rounded-xl bg-[#f4f1ea] px-4 py-3 text-sm leading-6 text-[#62645d]">Preparing your secure password reset...</p>}
         {mode === 'reset-password' && !checkingRecovery && !recoveryReady && <p role="alert" className="rounded-xl bg-[#fbe9e3] px-4 py-3 text-sm leading-6 text-[#8d321d]">This reset link is invalid or has expired. Request a new link and try again.</p>}
         {error && <p role="alert" className="rounded-xl bg-[#fbe9e3] px-4 py-3 text-sm leading-6 text-[#8d321d]">{error}</p>}
