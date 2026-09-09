@@ -26,9 +26,23 @@ export async function fulfillPayment(reference: string, transaction: NonNullable
     const { error } = await admin.from('orders').update({ status: 'paid', paid_at: now }).eq('id', order.id);
     if (error) return false;
   }
-  const { data: item } = await admin.from('order_items').select('book_id').eq('order_id', order.id).single();
+  const { data: item } = await admin.from('order_items').select('id, book_id, seller_id, unit_price_minor, platform_fee_minor, seller_amount_minor').eq('order_id', order.id).single();
   if (!item) return false;
   const { error: libraryError } = await admin.from('library_items').upsert({ user_id: order.user_id, book_id: item.book_id, order_id: order.id }, { onConflict: 'user_id,book_id' });
   if (libraryError) return false;
+  const eligibleAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  const { error: earningError } = await admin.from('seller_earnings').upsert({
+    seller_id: item.seller_id,
+    order_id: order.id,
+    order_item_id: item.id,
+    book_id: item.book_id,
+    gross_amount_minor: item.unit_price_minor,
+    platform_fee_minor: item.platform_fee_minor,
+    payment_fee_minor: 0,
+    seller_amount_minor: item.seller_amount_minor,
+    status: 'pending',
+    eligible_at: eligibleAt,
+  }, { onConflict: 'order_item_id', ignoreDuplicates: true });
+  if (earningError) return false;
   return item?.book_id ?? false;
 }

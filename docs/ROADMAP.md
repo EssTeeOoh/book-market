@@ -71,6 +71,7 @@ Physical books, delivery tracking, comments, advanced recommendations, and selle
 - Admins can publish, reject, archive, and delete books where the database relationships allow it.
 - Purchased books should generally be archived rather than physically deleted.
 - Admin analytics now show paid revenue, paid book items, completed orders, unique customers, and recent paid purchases.
+- Admin payout operations now show seller payout-account readiness, pending and eligible earnings, payout-batch counts, transfer history, and account-disable controls.
 - Analytics use verified `paid` orders rather than pending or failed checkout attempts.
 - Admin pages use the same account avatar navigation and white-and-coral visual language.
 
@@ -85,6 +86,9 @@ Physical books, delivery tracking, comments, advanced recommendations, and selle
 - The customer library shows purchased book titles, covers, and download controls.
 - Current payment proceeds go to the Tranquility Paystack merchant account.
 - Seller earnings are recorded conceptually in order items but seller payouts are not implemented yet.
+- Payout foundation migration `015_seller_payouts.sql` is now prepared for the selected transfer model.
+- Verified payments now snapshot a 20% platform fee and 80% seller amount on order items.
+- Verified payments now create a pending seller earning with an initial three-day eligibility hold.
 
 ### 3.6 Password recovery status
 
@@ -198,12 +202,13 @@ payouts
 - Confirm the link opens `/auth/reset-password`.
 - Confirm the user can set a password and sign in with it.
 
-### Priority B: Design and migrate payout data
+### Priority B: Complete payout data and seller onboarding
 
 - Confirm the 20/80 rule and whether Paystack fees reduce the platform share or seller share.
 - Confirm the final hold period: 3, 5, or 7 days.
 - Confirm weekly payout day and timezone.
-- Add payout-account, earning, and payout migrations.
+- Run migration `015_seller_payouts.sql` in Supabase SQL Editor.
+- Confirm the payout-account, earning, and payout tables are visible and their RLS policies work.
 - Add RLS policies so sellers see only their own payout information and admins see operational data.
 - Add server-only Paystack recipient creation and account verification.
 

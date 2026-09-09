@@ -13,6 +13,7 @@ The digital ebook marketplace MVP is operational for authentication, book upload
 - Added canonical `/upload` route with `/sell` compatibility redirect.
 - Added account profile avatar navigation to the upload page.
 - Added admin sales analytics for paid revenue and purchases.
+- Added admin payout operations for payout accounts, seller earnings, and payout batches.
 - Changed cover presentation to preserve the full uploaded image.
 - Fixed the successful upload redirect cleanup bug that was deleting uploaded files after metadata creation.
 - Added Paystack payment verification and library entitlement handling.
@@ -70,4 +71,4 @@ Seller payouts are not implemented yet. The selected design is Paystack Transfer
 
 ## Handoff Notes
 
-The next engineer should resolve password recovery first, then implement payout migrations and server-side Paystack transfers. Do not put Paystack secret keys in client components, do not trust browser-submitted seller amounts, and do not mark an earning paid until Paystack confirms the transfer.
+The payout foundation is now started: migration `015_seller_payouts.sql` defines payout accounts, seller earnings, and payout batches; verified payments snapshot the 20/80 split and create pending earnings with an initial three-day hold. The next engineer should resolve password recovery first, then run the migration, implement seller recipient setup, and build server-side Paystack transfers. Do not put Paystack secret keys in client components, do not trust browser-submitted seller amounts, and do not mark an earning paid until Paystack confirms the transfer.

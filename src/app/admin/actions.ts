@@ -78,3 +78,14 @@ export async function deleteBook(formData: FormData) {
   if (storageError) redirect(`/admin?warning=${encodeURIComponent(`Book deleted, but a Storage file could not be removed: ${storageError.message}`)}`);
   redirect('/admin?deleted=1');
 }
+
+export async function disablePayoutAccount(formData: FormData) {
+  await requireAdmin();
+  const accountId = String(formData.get('account_id') ?? '');
+  if (!/^[0-9a-f-]{36}$/.test(accountId)) redirect('/admin?error=Invalid%20payout%20account%20ID.');
+  const admin = createAdminClient();
+  const { error } = await admin.from('seller_payout_accounts').update({ status: 'disabled', updated_at: new Date().toISOString() }).eq('id', accountId);
+  if (error) redirect(`/admin?error=${encodeURIComponent(`Could not disable payout account: ${error.message}`)}`);
+  revalidatePath('/admin');
+  redirect('/admin?payout=disabled');
+}

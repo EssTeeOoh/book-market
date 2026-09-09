@@ -28,9 +28,11 @@ export async function POST(request: Request) {
   }
 
   const reference = `tranquility-${crypto.randomUUID()}`;
-  const { data: order, error: orderError } = await admin.from('orders').insert({ user_id: user.id, subtotal_minor: book.price_minor, platform_fee_minor: 0, total_minor: book.price_minor, currency: book.currency.trim(), status: 'pending' }).select('id').single();
+  const platformFeeMinor = Math.round(book.price_minor * 0.2);
+  const sellerAmountMinor = book.price_minor - platformFeeMinor;
+  const { data: order, error: orderError } = await admin.from('orders').insert({ user_id: user.id, subtotal_minor: book.price_minor, platform_fee_minor: platformFeeMinor, total_minor: book.price_minor, currency: book.currency.trim(), status: 'pending' }).select('id').single();
   if (orderError || !order) return NextResponse.json({ error: `Could not create order: ${orderError?.message ?? 'unknown error'}` }, { status: 500 });
-  const { error: itemError } = await admin.from('order_items').insert({ order_id: order.id, book_id: book.id, seller_id: book.owner_id, book_title: book.title, unit_price_minor: book.price_minor, platform_fee_minor: 0, seller_amount_minor: book.price_minor });
+  const { error: itemError } = await admin.from('order_items').insert({ order_id: order.id, book_id: book.id, seller_id: book.owner_id, book_title: book.title, unit_price_minor: book.price_minor, platform_fee_minor: platformFeeMinor, seller_amount_minor: sellerAmountMinor });
   if (itemError) { await admin.from('orders').delete().eq('id', order.id); return NextResponse.json({ error: `Could not create order item: ${itemError.message}` }, { status: 500 }); }
   const { error: paymentError } = await admin.from('payments').insert({ order_id: order.id, provider: 'paystack', provider_reference: reference, amount_minor: book.price_minor, currency: book.currency.trim(), status: 'initiated' });
   if (paymentError) { await admin.from('orders').delete().eq('id', order.id); return NextResponse.json({ error: `Could not create payment: ${paymentError.message}` }, { status: 500 }); }
