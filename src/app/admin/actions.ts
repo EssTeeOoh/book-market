@@ -23,6 +23,17 @@ export async function publishBook(formData: FormData) {
   revalidatePath('/admin');
 }
 
+export async function toggleFeaturedBook(formData: FormData) {
+  const supabase = await requireAdmin();
+  const bookId = String(formData.get('book_id') ?? '');
+  const featured = String(formData.get('is_featured') ?? '') === 'true';
+  const { error } = await supabase.from('books').update({ is_featured: !featured }).eq('id', bookId);
+  if (error) redirect(`/admin?error=${encodeURIComponent(`Could not update featured status: ${error.message}`)}`);
+  revalidatePath('/');
+  revalidatePath('/books');
+  revalidatePath('/admin');
+}
+
 export async function rejectBook(formData: FormData) {
   const supabase = await requireAdmin();
   const bookId = String(formData.get('book_id') ?? '');

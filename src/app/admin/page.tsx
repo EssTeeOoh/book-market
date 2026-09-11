@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { publishBook, rejectBook, archiveBook, deleteBook } from './actions';
+import { publishBook, rejectBook, archiveBook, deleteBook, toggleFeaturedBook } from './actions';
 import { DeleteBookButton } from './delete-book-button';
 import { AdminActionButton } from './admin-action-button';
 import { PayoutOperations } from './payout-operations';
@@ -25,7 +25,7 @@ export default async function AdminPage({ searchParams }: Props) {
 
   const admin = createAdminClient();
   const [{ data: books }, { data: orders }, { data: orderItems }, { data: payoutAccounts }, { data: earnings }, { data: payouts }] = await Promise.all([
-    supabase.from('books').select('id, title, author_name, status, created_at, owner_id').order('created_at', { ascending: false }),
+    supabase.from('books').select('id, title, author_name, status, is_featured, created_at, owner_id').order('created_at', { ascending: false }),
     admin.from('orders').select('id, user_id, total_minor, platform_fee_minor, currency, status, paid_at, created_at').eq('status', 'paid').order('paid_at', { ascending: false }),
     admin.from('order_items').select('order_id, book_id, book_title, unit_price_minor').order('created_at', { ascending: false }),
     admin.from('seller_payout_accounts').select('id, seller_id, bank_name, account_name, account_number_last4, status, recipient_code').order('updated_at', { ascending: false }),
